@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import moment from 'moment';
+import config from '../config';
 
 const CategoryView = () => {
   const { category } = useParams();
@@ -19,7 +20,7 @@ const CategoryView = () => {
   const fetchCategoryExpenses = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/expenses?category=${encodeURIComponent(category)}&month=${selectedMonth}`);
+      const response = await axios.get(`${config.API_BASE_URL}/api/expenses?category=${encodeURIComponent(category)}&month=${selectedMonth}`);
       setExpenses(response.data);
       
       // Calculate total amount for the category in the selected month
@@ -27,6 +28,8 @@ const CategoryView = () => {
       setTotalAmount(total);
     } catch (error) {
       console.error('Error fetching category expenses:', error);
+      setExpenses([]);
+      setTotalAmount(0);
     } finally {
       setLoading(false);
     }
@@ -265,7 +268,7 @@ const CategoryView = () => {
                         PDF Document
                       </p>
                       <a 
-                        href={selectedExpense.filePath} 
+                        href={`${config.API_BASE_URL}${selectedExpense.filePath}`} 
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="btn btn-primary"
@@ -278,7 +281,7 @@ const CategoryView = () => {
                     </div>
                   ) : (
                     <img 
-                      src={selectedExpense.filePath} 
+                      src={`${config.API_BASE_URL}${selectedExpense.filePath}`} 
                       alt="Payslip document" 
                       className="file-preview"
                       style={{ maxWidth: '100%' }}

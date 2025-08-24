@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import moment from 'moment';
+import config from '../config';
 
 const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
@@ -24,11 +25,17 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/expenses/dashboard?month=${selectedMonth}`);
+      const response = await axios.get(`${config.API_BASE_URL}/api/expenses/dashboard?month=${selectedMonth}`);
       setDashboardData(response.data);
       setFilteredExpenses(response.data.monthlyExpenses);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      // Set empty data to prevent infinite loading
+      setDashboardData({
+        totalAmount: 0,
+        monthlyExpenses: [],
+        categoryExpenses: []
+      });
     } finally {
       setLoading(false);
     }
@@ -36,10 +43,11 @@ const Dashboard = () => {
 
   const fetchFilteredExpenses = async () => {
     try {
-      const response = await axios.get(`/api/expenses?startDate=${startDate}&endDate=${endDate}`);
+      const response = await axios.get(`${config.API_BASE_URL}/api/expenses?startDate=${startDate}&endDate=${endDate}`);
       setFilteredExpenses(response.data);
     } catch (error) {
       console.error('Error fetching filtered expenses:', error);
+      setFilteredExpenses([]);
     }
   };
 

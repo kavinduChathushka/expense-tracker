@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import moment from 'moment';
+import config from '../config';
 
 const Upload = () => {
   const navigate = useNavigate();
@@ -93,7 +94,7 @@ const Upload = () => {
       data.append('category', formData.category);
       data.append('note', formData.note);
 
-      await axios.post('/api/expenses', data, {
+      await axios.post(`${config.API_BASE_URL}/api/expenses`, data, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }

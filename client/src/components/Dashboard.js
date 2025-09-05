@@ -7,7 +7,7 @@ import config from '../config';
 const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedMonth, setSelectedMonth] = useState(moment().format('YYYY-MM'));
+  const [selectedMonth, setSelectedMonth] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [filteredExpenses, setFilteredExpenses] = useState([]);
@@ -25,9 +25,23 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${config.API_BASE_URL}/api/expenses/dashboard?month=${selectedMonth}`);
-      setDashboardData(response.data);
-      setFilteredExpenses(response.data.monthlyExpenses);
+      if (selectedMonth) {
+        const response = await axios.get(`${config.API_BASE_URL}/api/expenses/dashboard?month=${selectedMonth}`);
+        setDashboardData(response.data);
+        setFilteredExpenses(response.data.monthlyExpenses);
+      } else {
+        const respAll = await axios.get(`${config.API_BASE_URL}/api/expenses`);
+        const all = respAll.data || [];
+        const total = all.reduce((sum, e) => sum + (e.amount || 0), 0);
+        const categoryMap = all.reduce((acc, e) => {
+          const key = e.category;
+          acc[key] = (acc[key] || 0) + (e.amount || 0);
+          return acc;
+        }, {});
+        const categoryExpenses = Object.keys(categoryMap).map(k => ({ _id: k, total: categoryMap[k] }));
+        setDashboardData({ currentMonth: 'All', totalAmount: total, categoryExpenses, monthlyExpenses: all });
+        setFilteredExpenses(all);
+      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       // Set empty data to prevent infinite loading
@@ -84,6 +98,153 @@ const Dashboard = () => {
     return categoryData ? categoryData.total : 0;
   };
 
+  const getDisplayedTotal = () => {
+    const list = (startDate && endDate) ? filteredExpenses : (dashboardData?.monthlyExpenses || []);
+    return list.reduce((sum, e) => sum + (e?.amount || 0), 0);
+  };
+
+  const handleDeleteExpense = async (expenseId, expenseTitle) => {
+    if (window.confirm(`Are you sure you want to delete "${expenseTitle}"? This action cannot be undone.`)) {
+      try {
+        await axios.delete(`${config.API_BASE_URL}/api/expenses/${expenseId}`);
+        // Refresh the data after successful deletion
+        fetchDashboardData();
+        if (startDate && endDate) {
+          fetchFilteredExpenses();
+        }
+      } catch (error) {
+        console.error('Error deleting expense:', error);
+        alert('Failed to delete expense. Please try again.');
+      }
+    }
+  };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  // CSV helpers and exporters
+  const escapeCsv = (value) => {
+    if (value === null || value === undefined) return '';
+    const s = String(value);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+
+  const downloadCsv = (csvString, filename) => {
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportMonthlyExpensesCsv = () => {
+    const rows = [[
+      'Title', 'Amount', 'Category', 'Date', 'Notes', 'Payslip'
+    ]];
+    (dashboardData?.monthlyExpenses || []).forEach((e) => {
+      rows.push([
+        escapeCsv(e.title),
+        e.amount,
+        escapeCsv(e.category),
+        moment(e.date).format('YYYY-MM-DD'),
+        escapeCsv(e.note || ''),
+        e.filePath ? `${config.API_BASE_URL}${e.filePath}` : ''
+      ]);
+    });
+    // Add shaded header row
+    const csv = rows.map((r, i) => {
+      if (i === 0) return r.map(cell => `"${cell}"`).join(',');
+      return r.join(',');
+    }).join('\n');
+    const fname = `monthly-expenses-${dashboardData?.currentMonth || selectedMonth}.csv`;
+    downloadCsv(csv, fname);
+  };
+
+  const exportCategorySummaryCsv = () => {
+    const rows = [[
+      'Category', 'Total Amount'
+    ]];
+    (dashboardData?.categoryExpenses || []).forEach((c) => {
+      rows.push([
+        escapeCsv(c._id),
+        c.total
+      ]);
+    });
+    // Add shaded header row
+    const csv = rows.map((r, i) => {
+      if (i === 0) return r.map(cell => `"${cell}"`).join(',');
+      return r.join(',');
+    }).join('\n');
+    const fname = `category-summary-${dashboardData?.currentMonth || selectedMonth}.csv`;
+    downloadCsv(csv, fname);
+  };
+
+
   if (loading) {
     return (
       <div className="loading" role="status" aria-live="polite">
@@ -115,7 +276,7 @@ const Dashboard = () => {
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '1.125rem', marginTop: '8px' }}>
             <span role="img" aria-label="calendar" style={{ marginRight: '8px' }}>📅</span>
-            Current Month: {moment(selectedMonth).format('MMMM YYYY')}
+            {selectedMonth ? `Current Month: ${moment(selectedMonth).format('MMMM YYYY')}` : 'All Transactions'}
           </p>
         </div>
 
@@ -132,7 +293,8 @@ const Dashboard = () => {
                 className="form-control"
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(e.target.value)}
-                aria-label="Select month to filter expenses"
+                placeholder=""
+                aria-label="Select month to filter expenses (leave empty to view all)"
               />
             </div>
             <div className="filter-group">
@@ -169,9 +331,9 @@ const Dashboard = () => {
           <div className="stat-item">
             <div className="stat-label">
               <span role="img" aria-label="total expenses" style={{ marginRight: '8px' }}>💰</span>
-              Total Monthly Expenses
+              Total Expenses
             </div>
-            <div className="stat-value">{formatCurrency(dashboardData.totalAmount)}</div>
+            <div className="stat-value">{formatCurrency(getDisplayedTotal())}</div>
           </div>
           <div className="stat-item">
             <div className="stat-label">
@@ -237,17 +399,27 @@ const Dashboard = () => {
 
       {/* Expenses Table */}
       <div className="card">
-        <div className="card-header">
-          <h2 className="card-title">
-            <span role="img" aria-label="expense list" style={{ marginRight: '12px' }}>📋</span>
-            {startDate && endDate ? 'Filtered Expenses' : 'Monthly Expenses'}
-          </h2>
-          {startDate && endDate && (
-            <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>
-              <span role="img" aria-label="date range" style={{ marginRight: '8px' }}>📅</span>
-              Showing expenses from {moment(startDate).format('MMM DD, YYYY')} to {moment(endDate).format('MMM DD, YYYY')}
-            </p>
-          )}
+        <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <div>
+            <h2 className="card-title" style={{ margin: 0 }}>
+              <span role="img" aria-label="expense list" style={{ marginRight: '12px' }}>📋</span>
+              {startDate && endDate ? 'Filtered Expenses' : (selectedMonth ? 'Monthly Expenses' : 'All Expenses')}
+            </h2>
+            {startDate && endDate && (
+              <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>
+                <span role="img" aria-label="date range" style={{ marginRight: '8px' }}>📅</span>
+                Showing expenses from {moment(startDate).format('MMM DD, YYYY')} to {moment(endDate).format('MMM DD, YYYY')}
+              </p>
+            )}
+          </div>
+          <button
+            className="btn btn-secondary"
+            onClick={exportMonthlyExpensesCsv}
+            aria-label="Export monthly expenses as CSV"
+          >
+            <span role="img" aria-label="download" style={{ marginRight: '8px' }}>⬇️</span>
+            Export Monthly CSV
+          </button>
         </div>
         
         {filteredExpenses.length === 0 ? (
@@ -269,6 +441,7 @@ const Dashboard = () => {
                   <th scope="col">Category</th>
                   <th scope="col">Date</th>
                   <th scope="col">Notes</th>
+                  <th scope="col">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -285,6 +458,17 @@ const Dashboard = () => {
                     </td>
                     <td>{moment(expense.date).format('MMM DD, YYYY')}</td>
                     <td>{expense.note || '-'}</td>
+                    <td>
+                      <button
+                        className="btn btn-danger"
+                        onClick={() => handleDeleteExpense(expense._id, expense.title)}
+                        aria-label={`Delete ${expense.title}`}
+                        style={{ padding: '4px 8px', fontSize: '0.875rem' }}
+                      >
+                        <span role="img" aria-label="delete" style={{ marginRight: '4px' }}>🗑️</span>
+                        Delete
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

@@ -8,7 +8,9 @@ const CategoryView = () => {
   const { category } = useParams();
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedMonth, setSelectedMonth] = useState(moment().format('YYYY-MM'));
+  const [selectedMonth, setSelectedMonth] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [totalAmount, setTotalAmount] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState(null);
@@ -17,13 +19,28 @@ const CategoryView = () => {
     fetchCategoryExpenses();
   }, [category, selectedMonth]);
 
+  useEffect(() => {
+    if (startDate && endDate) {
+      fetchCategoryExpenses();
+    }
+  }, [startDate, endDate]);
+
   const fetchCategoryExpenses = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${config.API_BASE_URL}/api/expenses?category=${encodeURIComponent(category)}&month=${selectedMonth}`);
+      let url = `${config.API_BASE_URL}/api/expenses?category=${encodeURIComponent(category)}`;
+      
+      // Add date range parameters if both start and end dates are provided
+      if (startDate && endDate) {
+        url += `&startDate=${startDate}&endDate=${endDate}`;
+      } else if (selectedMonth) {
+        url += `&month=${selectedMonth}`;
+      }
+      
+      const response = await axios.get(url);
       setExpenses(response.data);
       
-      // Calculate total amount for the category in the selected month
+      // Calculate total amount for the category
       const total = response.data.reduce((sum, expense) => sum + expense.amount, 0);
       setTotalAmount(total);
     } catch (error) {
@@ -43,6 +60,19 @@ const CategoryView = () => {
   const closeModal = () => {
     setShowModal(false);
     setSelectedExpense(null);
+  };
+
+  const handleDeleteExpense = async (expenseId, expenseTitle) => {
+    if (window.confirm(`Are you sure you want to delete "${expenseTitle}"? This action cannot be undone.`)) {
+      try {
+        await axios.delete(`${config.API_BASE_URL}/api/expenses/${expenseId}`);
+        // Refresh the data after successful deletion
+        fetchCategoryExpenses();
+      } catch (error) {
+        console.error('Error deleting expense:', error);
+        alert('Failed to delete expense. Please try again.');
+      }
+    }
   };
 
   const formatCurrency = (amount) => {
@@ -77,6 +107,55 @@ const CategoryView = () => {
     return filePath.split('.').pop().toLowerCase();
   };
 
+  // CSV export for this category's expenses in the selected month
+  const escapeCsv = (value) => {
+    if (value === null || value === undefined) return '';
+    const s = String(value);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+
+  const downloadCsv = (csvString, filename) => {
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportCategoryExpensesCsv = () => {
+    const rows = [[
+      'Title', 'Amount', 'Date', 'Notes', 'Payslip'
+    ]];
+    expenses.forEach((e) => {
+      rows.push([
+        escapeCsv(e.title),
+        e.amount,
+        moment(e.date).format('YYYY-MM-DD'),
+        escapeCsv(e.note || ''),
+        e.filePath ? `${config.API_BASE_URL}${e.filePath}` : ''
+      ]);
+    });
+    // Add shaded header row
+    const csv = rows.map((r, i) => {
+      if (i === 0) return r.map(cell => `"${cell}"`).join(',');
+      return r.join(',');
+    }).join('\n');
+    let fname = `${category}-expenses`;
+    if (startDate && endDate) {
+      fname += `-${moment(startDate).format('YYYY-MM-DD')}-to-${moment(endDate).format('YYYY-MM-DD')}`;
+    } else if (selectedMonth) {
+      fname += `-${selectedMonth}`;
+    } else {
+      fname += '-all';
+    }
+    fname += '.csv';
+    downloadCsv(csv, fname);
+  };
+
   if (loading) {
     return (
       <div className="loading" role="status" aria-live="polite">
@@ -89,7 +168,7 @@ const CategoryView = () => {
     <div>
       <div className="card">
         <div className="card-header">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             <div>
               <h1 className="card-title">
                 <span role="img" aria-label={category.toLowerCase()} style={{ marginRight: '12px', fontSize: '2rem' }}>
@@ -101,14 +180,24 @@ const CategoryView = () => {
                 View all expenses in this category
               </p>
             </div>
-            <Link to="/" className="btn btn-secondary">
-              <span role="img" aria-label="back to dashboard" style={{ marginRight: '8px' }}>←</span>
-              Back to Dashboard
-            </Link>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <button
+                className="btn btn-secondary"
+                onClick={exportCategoryExpensesCsv}
+                aria-label={`Export ${category} expenses as CSV`}
+              >
+                <span role="img" aria-label="download" style={{ marginRight: '8px' }}>⬇️</span>
+                Export CSV
+              </button>
+              <Link to="/" className="btn btn-secondary">
+                <span role="img" aria-label="back to dashboard" style={{ marginRight: '8px' }}>←</span>
+                Back to Dashboard
+              </Link>
+            </div>
           </div>
         </div>
 
-        {/* Month Filter */}
+        {/* Month and Date Range Filter */}
         <div className="filter-section">
           <div className="filter-row">
             <div className="filter-group">
@@ -120,15 +209,60 @@ const CategoryView = () => {
                 type="month"
                 className="form-control"
                 value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value)}
-                aria-label="Select month to filter expenses"
+                onChange={(e) => {
+                  setSelectedMonth(e.target.value);
+                  // Clear date range when month is selected
+                  setStartDate('');
+                  setEndDate('');
+                }}
+                placeholder=""
+                aria-label="Select month to filter expenses (leave empty to view all)"
+              />
+            </div>
+            <div className="filter-group">
+              <label className="form-label">
+                <span role="img" aria-label="start date" style={{ marginRight: '8px' }}>📅</span>
+                Start Date
+              </label>
+              <input
+                type="date"
+                className="form-control"
+                value={startDate}
+                onChange={(e) => {
+                  setStartDate(e.target.value);
+                  // Clear month when date range is selected
+                  setSelectedMonth('');
+                }}
+                aria-label="Select start date for expense filtering"
+              />
+            </div>
+            <div className="filter-group">
+              <label className="form-label">
+                <span role="img" aria-label="end date" style={{ marginRight: '8px' }}>📅</span>
+                End Date
+              </label>
+              <input
+                type="date"
+                className="form-control"
+                value={endDate}
+                onChange={(e) => {
+                  setEndDate(e.target.value);
+                  // Clear month when date range is selected
+                  setSelectedMonth('');
+                }}
+                aria-label="Select end date for expense filtering"
               />
             </div>
             <div className="filter-group">
               <div className="stat-item">
                 <div className="stat-label">
                   <span role="img" aria-label="total amount" style={{ marginRight: '8px' }}>💰</span>
-                  Total in {moment(selectedMonth).format('MMMM YYYY')}
+                  {startDate && endDate 
+                    ? `Total (${moment(startDate).format('MMM DD')} - ${moment(endDate).format('MMM DD, YYYY')})`
+                    : selectedMonth 
+                    ? `Total in ${moment(selectedMonth).format('MMMM YYYY')}` 
+                    : 'Total (All Time)'
+                  }
                 </div>
                 <div className="stat-value">{formatCurrency(totalAmount)}</div>
               </div>
@@ -142,14 +276,28 @@ const CategoryView = () => {
         <div className="card-header">
           <h2 className="card-title">
             <span role="img" aria-label="expense list" style={{ marginRight: '12px' }}>📋</span>
-            {expenses.length} Expense{expenses.length !== 1 ? 's' : ''} in {moment(selectedMonth).format('MMMM YYYY')}
+            {expenses.length} Expense{expenses.length !== 1 ? 's' : ''} 
+            {startDate && endDate 
+              ? ` (${moment(startDate).format('MMM DD')} - ${moment(endDate).format('MMM DD, YYYY')})`
+              : selectedMonth 
+              ? ` in ${moment(selectedMonth).format('MMMM YYYY')}`
+              : ' (All Time)'
+            }
           </h2>
         </div>
 
         {expenses.length === 0 ? (
           <div className="empty-state" role="status">
             <h3>No expenses found</h3>
-            <p>No expenses found in {category} for {moment(selectedMonth).format('MMMM YYYY')}</p>
+            <p>
+              No expenses found in {category} 
+              {startDate && endDate 
+                ? ` from ${moment(startDate).format('MMM DD, YYYY')} to ${moment(endDate).format('MMM DD, YYYY')}`
+                : selectedMonth 
+                ? ` for ${moment(selectedMonth).format('MMMM YYYY')}`
+                : ''
+              }
+            </p>
             <Link to="/upload" className="btn btn-primary">
               <span role="img" aria-label="upload" style={{ marginRight: '8px' }}>📤</span>
               Upload New Expense
@@ -177,14 +325,26 @@ const CategoryView = () => {
                     <td>{moment(expense.date).format('MMM DD, YYYY')}</td>
                     <td>{expense.note || '-'}</td>
                     <td>
-                      <button
-                        className="btn btn-primary"
-                        onClick={() => handleViewExpense(expense)}
-                        aria-label={`View details for ${expense.title}`}
-                      >
-                        <span role="img" aria-label="view details" style={{ marginRight: '8px' }}>👁️</span>
-                        View Details
-                      </button>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <button
+                          className="btn btn-primary"
+                          onClick={() => handleViewExpense(expense)}
+                          aria-label={`View details for ${expense.title}`}
+                          style={{ padding: '4px 8px', fontSize: '0.875rem' }}
+                        >
+                          <span role="img" aria-label="view details" style={{ marginRight: '4px' }}>👁️</span>
+                          View
+                        </button>
+                        <button
+                          className="btn btn-danger"
+                          onClick={() => handleDeleteExpense(expense._id, expense.title)}
+                          aria-label={`Delete ${expense.title}`}
+                          style={{ padding: '4px 8px', fontSize: '0.875rem' }}
+                        >
+                          <span role="img" aria-label="delete" style={{ marginRight: '4px' }}>🗑️</span>
+                          Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

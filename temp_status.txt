@@ -1,0 +1,22 @@
+ M client/src/components/CategoryView.js
+ M client/src/components/Dashboard.js
+ M client/src/components/Upload.js
+ M client/src/index.css
+ M server/index.js
+ M server/package-lock.json
+ M server/package.json
+ M server/routes/expenses.js
+?? DEPLOYMENT.md
+?? Dockerfile
+?? client/env.example
+?? client/vercel.json
+?? deploy-to-cloud.bat
+?? deploy-to-cloud.sh
+?? deploy.sh
+?? docker-compose.yml
+?? railway.json
+?? server/Procfile
+?? server/env.example
+?? server/railway.json
+?? temp_status.txt
+?? vercel.json

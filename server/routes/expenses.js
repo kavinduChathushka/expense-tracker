@@ -37,6 +37,8 @@ const upload = multer({
   }
 });
 
+// (Removed OCR helpers and extract endpoint)
+
 // Get all expenses with filtering
 router.get('/', async (req, res) => {
   try {

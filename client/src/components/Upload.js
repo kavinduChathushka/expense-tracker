@@ -15,6 +15,7 @@ const Upload = () => {
   });
   const [selectedFile, setSelectedFile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [extracting, setExtracting] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [filePreview, setFilePreview] = useState(null);
 
@@ -68,6 +69,8 @@ const Upload = () => {
       }
     }
   };
+
+  // Removed OCR auto-fill handler
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -124,6 +127,7 @@ const Upload = () => {
         type: 'error', 
         text: error.response?.data?.message || 'Error uploading expense. Please try again.' 
       });
+
     } finally {
       setLoading(false);
     }
@@ -155,192 +159,193 @@ const Upload = () => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} role="form" aria-label="Expense upload form">
-        {/* File Upload */}
-        <div className="form-group">
-          <label className="form-label">
-            <span role="img" aria-label="file" style={{ marginRight: '8px' }}>📄</span>
-            Payslip File *
-          </label>
-          {!selectedFile ? (
-            <div 
-              className="file-upload" 
-              onClick={() => document.getElementById('file-input').click()}
-              role="button"
-              tabIndex="0"
-              onKeyDown={(e) => e.key === 'Enter' && document.getElementById('file-input').click()}
-              aria-label="Click to select a payslip file"
-            >
-              <div className="upload-icon">📄</div>
-              <p style={{ fontSize: '1.125rem', marginBottom: '8px' }}>
-                Click to select a file (PDF or Image)
-              </p>
-              <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                Supported formats: PDF, JPG, PNG
-              </p>
-              <input
-                id="file-input"
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png"
-                onChange={handleFileSelect}
-                aria-describedby="file-help"
-                className="hidden"
-              />
-              <div id="file-help" style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '8px' }}>
-                Maximum file size: 10MB
-              </div>
+      <form onSubmit={handleSubmit} role="form" aria-label="Expense upload form" className="upload-form">
+        <div className="upload-left">
+          {/* Expense Title (left, row 1) */}
+          <div className="form-group">
+            <label className="form-label" htmlFor="title">
+              <span role="img" aria-label="title" style={{ marginRight: '8px' }}>📝</span>
+              Expense Title *
+            </label>
+            <input
+              type="text"
+              id="title"
+              className="form-control"
+              name="title"
+              value={formData.title}
+              onChange={handleInputChange}
+              placeholder="Enter expense title"
+              required
+              aria-describedby="title-help"
+            />
+            <div id="title-help" style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+              Give your expense a descriptive name
             </div>
-          ) : (
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-                <span style={{ color: 'var(--text-secondary)' }}>
-                  <span role="img" aria-label="selected file" style={{ marginRight: '8px' }}>📎</span>
-                  Selected: {selectedFile.name}
-                </span>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={removeFile}
-                  aria-label="Remove selected file"
-                >
-                  <span role="img" aria-label="remove" style={{ marginRight: '8px' }}>🗑️</span>
-                  Remove
-                </button>
-              </div>
-              
-              {filePreview && filePreview !== 'pdf' && (
-                <img src={filePreview} alt="Payslip preview" className="file-preview" />
-              )}
-              
-              {filePreview === 'pdf' && (
-                <div className="pdf-preview">
-                  <p style={{ textAlign: 'center', padding: '2rem' }}>
-                    <span role="img" aria-label="PDF document" style={{ fontSize: '3rem', display: 'block', marginBottom: '16px' }}>📄</span>
-                    PDF File Selected: {selectedFile.name}
-                  </p>
+          </div>
+
+          {/* Payment Date (left, row 2) */}
+          <div className="form-group">
+            <label className="form-label" htmlFor="date">
+              <span role="img" aria-label="date" style={{ marginRight: '8px' }}>📅</span>
+              Payment Date *
+            </label>
+            <input
+              type="date"
+              id="date"
+              className="form-control"
+              name="date"
+              value={formData.date}
+              onChange={handleInputChange}
+              required
+              aria-describedby="date-help"
+            />
+            <div id="date-help" style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+              When was this expense incurred?
+            </div>
+          </div>
+          {/* Payslip File (left, row 3) */}
+          <div className="form-group">
+            <label className="form-label">
+              <span role="img" aria-label="file" style={{ marginRight: '8px' }}>📄</span>
+              Payslip File *
+            </label>
+            {!selectedFile ? (
+              <div 
+                className="file-upload" 
+                onClick={() => document.getElementById('file-input').click()}
+                role="button"
+                tabIndex="0"
+                onKeyDown={(e) => e.key === 'Enter' && document.getElementById('file-input').click()}
+                aria-label="Click to select a payslip file"
+              >
+                <div className="upload-icon">📄</div>
+                <p style={{ fontSize: '1.125rem', marginBottom: '8px' }}>
+                  Click to select a file (PDF or Image)
+                </p>
+                <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                  Supported formats: PDF, JPG, PNG
+                </p>
+                <input
+                  id="file-input"
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={handleFileSelect}
+                  aria-describedby="file-help"
+                  className="hidden"
+                />
+                <div id="file-help" style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '8px' }}>
+                  Maximum file size: 10MB
                 </div>
-              )}
+              </div>
+            ) : (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>
+                    <span role="img" aria-label="selected file" style={{ marginRight: '8px' }}>📎</span>
+                    Selected: {selectedFile.name}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={removeFile}
+                    aria-label="Remove selected file"
+                  >
+                    <span role="img" aria-label="remove" style={{ marginRight: '8px' }}>🗑️</span>
+                    Remove
+                  </button>
+                </div>
+                {filePreview && filePreview !== 'pdf' && (
+                  <img src={filePreview} alt="Payslip preview" className="file-preview" />
+                )}
+                {filePreview === 'pdf' && (
+                  <div className="pdf-preview">
+                    <p style={{ textAlign: 'center', padding: '2rem' }}>
+                      <span role="img" aria-label="PDF document" style={{ fontSize: '3rem', display: 'block', marginBottom: '16px' }}>📄</span>
+                      PDF File Selected: {selectedFile.name}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+            {/* Removed Auto-fill button */}
+          </div>
+        </div>
+
+        <div className="upload-right">
+          {/* Amount (right, row 1) */}
+          <div className="form-group">
+            <label className="form-label" htmlFor="amount">
+              <span role="img" aria-label="amount" style={{ marginRight: '8px' }}>💰</span>
+              Amount *
+            </label>
+            <input
+              type="number"
+              id="amount"
+              className="form-control"
+              name="amount"
+              value={formData.amount}
+              onChange={handleInputChange}
+              placeholder="0.00"
+              step="0.01"
+              min="0"
+              required
+              aria-describedby="amount-help"
+            />
+            <div id="amount-help" style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+              Enter the total amount spent
             </div>
-          )}
-        </div>
+          </div>
 
-        {/* Title */}
-        <div className="form-group">
-          <label className="form-label" htmlFor="title">
-            <span role="img" aria-label="title" style={{ marginRight: '8px' }}>📝</span>
-            Expense Title *
-          </label>
-          <input
-            type="text"
-            id="title"
-            className="form-control"
-            name="title"
-            value={formData.title}
-            onChange={handleInputChange}
-            placeholder="Enter expense title"
-            required
-            aria-describedby="title-help"
-          />
-          <div id="title-help" style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Give your expense a descriptive name
+          {/* Category (right, row 2) */}
+          <div className="form-group">
+            <label className="form-label" htmlFor="category">
+              <span role="img" aria-label="category" style={{ marginRight: '8px' }}>🏷️</span>
+              Category *
+            </label>
+            <select
+              id="category"
+              className="form-select"
+              name="category"
+              value={formData.category}
+              onChange={handleInputChange}
+              required
+              aria-describedby="category-help"
+            >
+              <option value="">Select a category</option>
+              {categories.map(category => (
+                <option key={category} value={category}>
+                  {getCategoryIcon(category)} {category}
+                </option>
+              ))}
+            </select>
+            <div id="category-help" style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+              Choose the most appropriate category for this expense
+            </div>
+          </div>
+
+          {/* Notes (right, row 3) */}
+          <div className="form-group">
+            <label className="form-label" htmlFor="note">
+              <span role="img" aria-label="notes" style={{ marginRight: '8px' }}>📝</span>
+              Notes (Optional)
+            </label>
+            <textarea
+              id="note"
+              className="form-control notes-fixed"
+              name="note"
+              value={formData.note}
+              onChange={handleInputChange}
+              placeholder="Add any additional notes about this expense"
+              rows="10"
+              aria-describedby="note-help"
+            />
+            <div id="note-help" style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+              Optional details, vendor information, or special notes
+            </div>
           </div>
         </div>
 
-        {/* Amount */}
-        <div className="form-group">
-          <label className="form-label" htmlFor="amount">
-            <span role="img" aria-label="amount" style={{ marginRight: '8px' }}>💰</span>
-            Amount *
-          </label>
-          <input
-            type="number"
-            id="amount"
-            className="form-control"
-            name="amount"
-            value={formData.amount}
-            onChange={handleInputChange}
-            placeholder="0.00"
-            step="0.01"
-            min="0"
-            required
-            aria-describedby="amount-help"
-          />
-          <div id="amount-help" style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Enter the total amount spent
-          </div>
-        </div>
-
-        {/* Date */}
-        <div className="form-group">
-          <label className="form-label" htmlFor="date">
-            <span role="img" aria-label="date" style={{ marginRight: '8px' }}>📅</span>
-            Payment Date *
-          </label>
-          <input
-            type="date"
-            id="date"
-            className="form-control"
-            name="date"
-            value={formData.date}
-            onChange={handleInputChange}
-            required
-            aria-describedby="date-help"
-          />
-          <div id="date-help" style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            When was this expense incurred?
-          </div>
-        </div>
-
-        {/* Category */}
-        <div className="form-group">
-          <label className="form-label" htmlFor="category">
-            <span role="img" aria-label="category" style={{ marginRight: '8px' }}>🏷️</span>
-            Category *
-          </label>
-          <select
-            id="category"
-            className="form-select"
-            name="category"
-            value={formData.category}
-            onChange={handleInputChange}
-            required
-            aria-describedby="category-help"
-          >
-            <option value="">Select a category</option>
-            {categories.map(category => (
-              <option key={category} value={category}>
-                {getCategoryIcon(category)} {category}
-              </option>
-            ))}
-          </select>
-          <div id="category-help" style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Choose the most appropriate category for this expense
-          </div>
-        </div>
-
-        {/* Notes */}
-        <div className="form-group">
-          <label className="form-label" htmlFor="note">
-            <span role="img" aria-label="notes" style={{ marginRight: '8px' }}>📝</span>
-            Notes (Optional)
-          </label>
-          <textarea
-            id="note"
-            className="form-control"
-            name="note"
-            value={formData.note}
-            onChange={handleInputChange}
-            placeholder="Add any additional notes about this expense"
-            rows="4"
-            aria-describedby="note-help"
-          />
-          <div id="note-help" style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Optional details, vendor information, or special notes
-          </div>
-        </div>
-
-        {/* Submit Button */}
-        <div className="form-group">
+        <div className="form-group form-actions">
           <button
             type="submit"
             className="btn btn-primary"

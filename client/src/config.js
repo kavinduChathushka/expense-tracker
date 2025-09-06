@@ -1,7 +1,10 @@
 // API Configuration
 const config = {
   // API base URL - use environment variable or fallback to localhost for development
-  API_BASE_URL: process.env.REACT_APP_API_URL || 'http://localhost:5000',
+  API_BASE_URL: process.env.REACT_APP_API_URL || 
+    (process.env.NODE_ENV === 'production' 
+      ? 'https://expense-tracker-backend.onrender.com' 
+      : 'http://localhost:5000'),
   
   // Check if we're in production
   isProduction: process.env.NODE_ENV === 'production',

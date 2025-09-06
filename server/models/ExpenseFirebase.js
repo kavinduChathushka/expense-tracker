@@ -18,6 +18,8 @@ class ExpenseFirebase {
   // Create a new expense
   static async create(expenseData) {
     try {
+      console.log('🔥 Creating expense in Firestore:', expenseData);
+      
       const expense = new ExpenseFirebase(expenseData);
       const docRef = await db.collection('expenses').add({
         title: expense.title,
@@ -32,8 +34,10 @@ class ExpenseFirebase {
         updatedAt: expense.updatedAt
       });
       
+      console.log('✅ Expense created in Firestore with ID:', docRef.id);
       return { id: docRef.id, ...expenseData };
     } catch (error) {
+      console.error('❌ Firestore error:', error);
       throw new Error(`Failed to create expense: ${error.message}`);
     }
   }

@@ -83,11 +83,22 @@ router.get('/dashboard', async (req, res) => {
 // Create new expense with file upload
 router.post('/', upload.single('payslip'), async (req, res) => {
   try {
+    console.log('📤 Expense upload request received');
+    console.log('Request body:', req.body);
+    console.log('Request file:', req.file ? 'File present' : 'No file');
+    
     if (!req.file) {
+      console.log('❌ No file uploaded');
       return res.status(400).json({ message: 'Payslip file is required' });
     }
 
     const { title, amount, date, category, note } = req.body;
+    
+    // Validate required fields
+    if (!title || !amount || !date || !category) {
+      console.log('❌ Missing required fields:', { title: !!title, amount: !!amount, date: !!date, category: !!category });
+      return res.status(400).json({ message: 'All required fields must be provided' });
+    }
     
     // Generate month from date
     const month = moment(date).format('YYYY-MM');
@@ -105,10 +116,17 @@ router.post('/', upload.single('payslip'), async (req, res) => {
       filePath
     };
 
+    console.log('💾 Saving expense to database:', expenseData);
     const savedExpense = await Expense.create(expenseData);
+    console.log('✅ Expense saved successfully:', savedExpense.id);
+    
     res.status(201).json(savedExpense);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('❌ Error creating expense:', error);
+    res.status(500).json({ 
+      message: 'Error uploading expense. Please try again.',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 

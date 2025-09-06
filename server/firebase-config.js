@@ -5,9 +5,15 @@ const path = require('path');
 let db;
 
 try {
+  console.log('🔥 Initializing Firebase Admin SDK...');
+  console.log('Environment:', process.env.NODE_ENV);
+  console.log('Project ID:', process.env.FIREBASE_PROJECT_ID);
+  
   // Check if we're in production (using environment variables)
   if (process.env.NODE_ENV === 'production' && process.env.FIREBASE_PROJECT_ID) {
     // Production: Use environment variables
+    console.log('🚀 Using production Firebase configuration');
+    
     const serviceAccount = {
       type: "service_account",
       project_id: process.env.FIREBASE_PROJECT_ID || 'jrc-expense-tracking',
@@ -15,18 +21,20 @@ try {
       private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
       client_email: process.env.FIREBASE_CLIENT_EMAIL,
       client_id: process.env.FIREBASE_CLIENT_ID,
-      auth_uri: process.env.FIREBASE_AUTH_URI,
-      token_uri: process.env.FIREBASE_TOKEN_URI,
+      auth_uri: process.env.FIREBASE_AUTH_URI || "https://accounts.google.com/o/oauth2/auth",
+      token_uri: process.env.FIREBASE_TOKEN_URI || "https://oauth2.googleapis.com/token",
       auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
       client_x509_cert_url: `https://www.googleapis.com/robot/v1/metadata/x509/${process.env.FIREBASE_CLIENT_EMAIL}`
     };
 
     admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
+      credential: admin.credential.cert(serviceAccount),
+      projectId: process.env.FIREBASE_PROJECT_ID
     });
     console.log('✅ Firebase Admin SDK initialized for production');
   } else {
     // Development: Try to use service account file
+    console.log('🔧 Using development Firebase configuration');
     const serviceAccountPath = path.join(__dirname, 'firebase-service-account.json');
     
     if (require('fs').existsSync(serviceAccountPath)) {
@@ -45,8 +53,10 @@ try {
   }
   
   db = admin.firestore();
+  console.log('🔥 Firestore database initialized successfully');
 } catch (error) {
   console.error('❌ Firebase initialization error:', error);
+  console.error('Error details:', error.message);
   process.exit(1);
 }
 

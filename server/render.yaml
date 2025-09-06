@@ -11,7 +11,7 @@ services:
       - key: PORT
         value: 10000
       - key: FIREBASE_PROJECT_ID
-        value: expense-track-jrc
+        value: jrc-expense-tracking
       - key: FIREBASE_PRIVATE_KEY_ID
         value: be73c9e4c7f9ff7987deb217b05621cf7bb67960
       - key: FIREBASE_PRIVATE_KEY

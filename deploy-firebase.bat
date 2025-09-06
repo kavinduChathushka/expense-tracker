@@ -14,7 +14,7 @@ firebase login --no-localhost
 
 REM Set the correct project
 echo 📁 Setting Firebase project...
-firebase use expense-track-jrc
+firebase use jrc-expense-tracking
 
 REM Build the frontend
 echo 🏗️ Building frontend for production...
@@ -31,7 +31,7 @@ echo 🌐 Deploying to Firebase Hosting...
 firebase deploy --only hosting
 
 echo ✅ Deployment complete!
-echo 🌐 Your app is now live at: https://expense-track-jrc.web.app
+echo 🌐 Your app is now live at: https://jrc-expense-tracking.web.app
 echo.
 echo 📋 Next steps:
 echo 1. Deploy your backend to Render/Railway

@@ -10,10 +10,19 @@
     "build": "cd client && npm run build",
     "install-all": "npm install && cd server && npm install && cd ../client && npm install"
   },
-  "keywords": ["expense", "tracker", "react", "node", "mongodb"],
+  "keywords": [
+    "expense",
+    "tracker",
+    "react",
+    "node",
+    "mongodb"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
     "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "firebase": "^12.2.1"
   }
 }

@@ -446,7 +446,7 @@ const Dashboard = () => {
               </thead>
               <tbody>
                 {filteredExpenses.map((expense) => (
-                  <tr key={expense._id}>
+                  <tr key={expense.id || expense._id}>
                     <td>{expense.title}</td>
                     <td style={{ fontWeight: '600', color: 'var(--accent-primary)' }}>
                       {formatCurrency(expense.amount)}
@@ -461,7 +461,7 @@ const Dashboard = () => {
                     <td>
                       <button
                         className="btn btn-danger"
-                        onClick={() => handleDeleteExpense(expense._id, expense.title)}
+                        onClick={() => handleDeleteExpense(expense.id || expense._id, expense.title)}
                         aria-label={`Delete ${expense.title}`}
                         style={{ padding: '4px 8px', fontSize: '0.875rem' }}
                       >

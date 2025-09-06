@@ -1,8 +1,10 @@
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
 require('dotenv').config({ path: './config.env' });
+
+// Initialize Firebase
+require('./firebase-config');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -29,15 +31,11 @@ app.get('/health', (req, res) => {
   });
 });
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-  .then(() => console.log('Connected to MongoDB Atlas'))
-  .catch(err => console.error('MongoDB connection error:', err));
+// Firebase connection is handled in firebase-config.js
+console.log('🔥 Connected to Firebase Firestore');
 
-// Routes
+
+  // Routes
 app.use('/api/expenses', require('./routes/expenses'));
 
 // Serve static files from React build in production
@@ -74,7 +72,6 @@ process.on('SIGTERM', () => {
   console.log('SIGTERM received, shutting down gracefully');
   server.close(() => {
     console.log('Process terminated');
-    mongoose.connection.close();
   });
 });
 

@@ -3,7 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const moment = require('moment');
-const Expense = require('../models/Expense');
+const Expense = require('../models/ExpenseFirebase');
 
 const router = express.Router();
 
@@ -60,7 +60,7 @@ router.get('/', async (req, res) => {
       };
     }
 
-    const expenses = await Expense.find(filter).sort({ date: -1 });
+    const expenses = await Expense.find(filter);
     res.json(expenses);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -73,27 +73,8 @@ router.get('/dashboard', async (req, res) => {
     const { month } = req.query;
     const currentMonth = month || moment().format('YYYY-MM');
     
-    // Get total expenses for the month
-    const totalExpenses = await Expense.aggregate([
-      { $match: { month: currentMonth } },
-      { $group: { _id: null, total: { $sum: '$amount' } } }
-    ]);
-
-    // Get expenses by category for the month
-    const categoryExpenses = await Expense.aggregate([
-      { $match: { month: currentMonth } },
-      { $group: { _id: '$category', total: { $sum: '$amount' } } }
-    ]);
-
-    // Get all expenses for the month
-    const monthlyExpenses = await Expense.find({ month: currentMonth }).sort({ date: -1 });
-
-    res.json({
-      currentMonth,
-      totalAmount: totalExpenses[0]?.total || 0,
-      categoryExpenses,
-      monthlyExpenses
-    });
+    const dashboardData = await Expense.getDashboardSummary(currentMonth);
+    res.json(dashboardData);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -114,7 +95,7 @@ router.post('/', upload.single('payslip'), async (req, res) => {
     // Create file path for database
     const filePath = `/uploads/${req.file.filename}`;
 
-    const expense = new Expense({
+    const expenseData = {
       title,
       amount: parseFloat(amount),
       date: new Date(date),
@@ -122,9 +103,9 @@ router.post('/', upload.single('payslip'), async (req, res) => {
       note,
       month,
       filePath
-    });
+    };
 
-    const savedExpense = await expense.save();
+    const savedExpense = await Expense.create(expenseData);
     res.status(201).json(savedExpense);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -150,18 +131,16 @@ router.put('/:id', async (req, res) => {
     const { title, amount, date, category, note } = req.body;
     const month = moment(date).format('YYYY-MM');
     
-    const updatedExpense = await Expense.findByIdAndUpdate(
-      req.params.id,
-      {
-        title,
-        amount: parseFloat(amount),
-        date: new Date(date),
-        category,
-        note,
-        month
-      },
-      { new: true }
-    );
+    const updateData = {
+      title,
+      amount: parseFloat(amount),
+      date: new Date(date),
+      category,
+      note,
+      month
+    };
+
+    const updatedExpense = await Expense.findByIdAndUpdate(req.params.id, updateData);
 
     if (!updatedExpense) {
       return res.status(404).json({ message: 'Expense not found' });
